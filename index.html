@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#071a46">
+  <meta name="description" content="Créez votre visuel de soutien à KlabCenter et partagez-le avec votre communauté.">
+  <title>Je soutiens KlabCenter</title>
+  <style>
+    :root{--blue:#0b2d78;--electric:#1268ff;--ink:#071a46;--white:#fff}
+    *{box-sizing:border-box}
+    body{margin:0;background:linear-gradient(180deg,#061331,#0b2d78);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#fff}
+    .app{min-height:100svh;display:flex;justify-content:center;padding:18px 12px 34px}
+    .shell{width:min(100%,520px)}
+    .top{text-align:center;margin:4px 0 14px}
+    .top h1{font-size:clamp(22px,6vw,32px);margin:0 0 5px;font-weight:900;letter-spacing:-.5px}
+    .top p{margin:0;color:#dbe8ff;font-size:14px}
+    .card{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);border-radius:24px;padding:12px;backdrop-filter:blur(12px);box-shadow:0 20px 55px rgba(0,0,0,.35)}
+    .preview-wrap{position:relative;width:100%;aspect-ratio:1;border-radius:18px;overflow:hidden;background:#071a46}
+    #canvas{display:block;width:100%;height:100%}
+    .empty{position:absolute;inset:auto 16px 16px;display:flex;justify-content:center;pointer-events:none}
+    .empty span{background:rgba(7,26,70,.9);padding:9px 14px;border-radius:999px;font-size:13px}
+    .controls{display:grid;gap:10px;margin-top:12px}
+    button,.file-label{appearance:none;border:0;border-radius:14px;padding:14px 16px;font-size:15px;font-weight:800;cursor:pointer;text-align:center}
+    .primary{background:#1268ff;color:white;box-shadow:0 8px 20px rgba(18,104,255,.35)}
+    .secondary{background:white;color:#071a46}
+    .ghost{background:rgba(255,255,255,.11);color:white;border:1px solid rgba(255,255,255,.16)}
+    input[type=file]{display:none}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .sliders{display:grid;gap:8px;background:rgba(0,0,0,.16);padding:12px;border-radius:16px}
+    .slider-line{display:grid;grid-template-columns:70px 1fr 44px;align-items:center;gap:8px;font-size:12px;color:#dce7ff}
+    input[type=range]{width:100%;accent-color:#1268ff}
+    .status{text-align:center;font-size:12px;color:#bcd0f5;min-height:18px;margin-top:10px}
+    .hint{text-align:center;color:#c7d6f5;font-size:12px;line-height:1.45;margin:12px 5px 0}
+    @media(max-width:390px){.row{grid-template-columns:1fr}.card{padding:9px}}
+  </style>
+</head>
+<body>
+<main class="app">
+  <div class="shell">
+    <div class="top">
+      <h1>Je soutiens KlabCenter 💙</h1>
+      <p>Ajoute ta photo et montre ton soutien à notre entreprise.</p>
+    </div>
+
+    <section class="card">
+      <div class="preview-wrap">
+        <canvas id="canvas" width="1254" height="1254"></canvas>
+        <div class="empty" id="empty"><span>Ajoute ta photo pour commencer</span></div>
+      </div>
+
+      <div class="controls">
+        <label class="file-label primary" for="photo">📸 Ajouter / prendre ma photo</label>
+        <input id="photo" type="file" accept="image/*" capture="user">
+
+        <div class="sliders" id="adjust" hidden>
+          <div class="slider-line"><span>Zoom</span><input id="zoom" type="range" min="1" max="3" step=".01" value="1"><output id="zoomOut">1.00×</output></div>
+          <div class="slider-line"><span>Horizontal</span><input id="x" type="range" min="-200" max="200" step="1" value="0"><output id="xOut">0</output></div>
+          <div class="slider-line"><span>Vertical</span><input id="y" type="range" min="-200" max="200" step="1" value="0"><output id="yOut">0</output></div>
+        </div>
+
+        <div class="row">
+          <button class="secondary" id="download">⬇️ Télécharger</button>
+          <button class="primary" id="share">📲 Partager</button>
+        </div>
+        <button class="ghost" id="reset">↺ Recommencer</button>
+        <div class="status" id="status"></div>
+      </div>
+      <p class="hint">Ta photo reste dans ton appareil : elle est utilisée localement pour créer le visuel.</p>
+    </section>
+  </div>
+</main>
+
+<script>
+const W=1254,H=1254;
+const PHOTO={cx:627,cy:552,r:298};
+const canvas=document.getElementById('canvas'),ctx=canvas.getContext('2d');
+const frame=new Image(); frame.src='./assets/klabcenter-soutien-frame.png';
+let photoImg=null, objectUrl=null;
+
+const $=id=>document.getElementById(id);
+function setStatus(t){$('status').textContent=t||''}
+function updateLabels(){
+  $('zoomOut').textContent=Number($('zoom').value).toFixed(2)+'×';
+  $('xOut').textContent=$('x').value;
+  $('yOut').textContent=$('y').value;
+}
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  ctx.drawImage(frame,0,0,W,H);
+  if(photoImg){
+    const z=Number($('zoom').value), ox=Number($('x').value), oy=Number($('y').value);
+    const scale=Math.max((PHOTO.r*2)/photoImg.width,(PHOTO.r*2)/photoImg.height)*z;
+    const dw=photoImg.width*scale, dh=photoImg.height*scale;
+    const dx=PHOTO.cx-dw/2+ox, dy=PHOTO.cy-dh/2+oy;
+    ctx.save();
+    ctx.beginPath();ctx.arc(PHOTO.cx,PHOTO.cy,PHOTO.r,0,Math.PI*2);ctx.clip();
+    ctx.drawImage(photoImg,dx,dy,dw,dh);
+    ctx.restore();
+    // clean white inner rim, keeping the blue frame visible
+    ctx.save();
+    ctx.beginPath();ctx.arc(PHOTO.cx,PHOTO.cy,PHOTO.r,0,Math.PI*2);
+    ctx.strokeStyle='rgba(255,255,255,.9)';ctx.lineWidth=5;ctx.stroke();ctx.restore();
+  }
+}
+frame.onload=draw;
+$('photo').addEventListener('change',e=>{
+  const f=e.target.files[0]; if(!f)return;
+  if(objectUrl)URL.revokeObjectURL(objectUrl);
+  objectUrl=URL.createObjectURL(f);
+  photoImg=new Image();
+  photoImg.onload=()=>{
+    $('empty').style.display='none';
+    $('adjust').hidden=false;
+    $('zoom').value=1;$('x').value=0;$('y').value=0;updateLabels();draw();
+    setStatus('Photo ajoutée. Ajuste-la puis partage ton soutien.');
+  };
+  photoImg.src=objectUrl;
+});
+['zoom','x','y'].forEach(id=>$(id).addEventListener('input',()=>{updateLabels();draw()}));
+
+function blob(){
+  return new Promise(resolve=>canvas.toBlob(resolve,'image/png',1));
+}
+$('download').onclick=async()=>{
+  if(!photoImg){setStatus('Ajoute d’abord ta photo.');return}
+  const b=await blob(), url=URL.createObjectURL(b), a=document.createElement('a');
+  a.href=url;a.download='KlabCenter-je-soutiens.png';a.click();URL.revokeObjectURL(url);
+  setStatus('Visuel téléchargé.');
+};
+$('share').onclick=async()=>{
+  if(!photoImg){setStatus('Ajoute d’abord ta photo.');return}
+  const b=await blob(), file=new File([b],'KlabCenter-je-soutiens.png',{type:'image/png'});
+  if(navigator.share && (!navigator.canShare || navigator.canShare({files:[file]}))){
+    try{
+      await navigator.share({title:'Je soutiens KlabCenter',text:'Je soutiens KlabCenter 💙 — Ensemble, allons plus loin !',files:[file]});
+      setStatus('Visuel partagé.');
+    }catch(e){ if(e.name!=='AbortError') setStatus('Partage annulé ou non disponible.'); }
+  }else{
+    const url=URL.createObjectURL(b), a=document.createElement('a');
+    a.href=url;a.download='KlabCenter-je-soutiens.png';a.click();URL.revokeObjectURL(url);
+    setStatus('Le partage direct n’est pas disponible ici : le visuel a été téléchargé.');
+  }
+};
+$('reset').onclick=()=>{
+  photoImg=null;
+  if(objectUrl)URL.revokeObjectURL(objectUrl);objectUrl=null;
+  $('photo').value='';$('adjust').hidden=true;$('empty').style.display='flex';
+  setStatus('');draw();
+};
+updateLabels();
+</script>
+</body>
+</html>
