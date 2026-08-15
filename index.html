@@ -50,8 +50,12 @@
       </div>
 
       <div class="controls">
-        <label class="file-label primary" for="photo">📸 Ajouter / prendre ma photo</label>
-        <input id="photo" type="file" accept="image/*" capture="user">
+        <div class="row">
+          <label class="file-label primary" for="photoGallery">🖼️ Choisir une photo</label>
+          <label class="file-label ghost" for="photoCamera">📸 Prendre une photo</label>
+        </div>
+        <input id="photoGallery" type="file" accept="image/*">
+        <input id="photoCamera" type="file" accept="image/*" capture="user">
 
         <div class="sliders" id="adjust" hidden>
           <div class="slider-line"><span>Zoom</span><input id="zoom" type="range" min="1" max="3" step=".01" value="1"><output id="zoomOut">1.00×</output></div>
@@ -104,8 +108,9 @@ function draw(){
   }
 }
 frame.onload=draw;
-$('photo').addEventListener('change',e=>{
-  const f=e.target.files[0]; if(!f)return;
+function loadPhoto(e){
+  const f=e.target.files && e.target.files[0];
+  if(!f) return;
   if(objectUrl)URL.revokeObjectURL(objectUrl);
   objectUrl=URL.createObjectURL(f);
   photoImg=new Image();
@@ -116,7 +121,9 @@ $('photo').addEventListener('change',e=>{
     setStatus('Photo ajoutée. Ajuste-la puis partage ton soutien.');
   };
   photoImg.src=objectUrl;
-});
+}
+$('photoGallery').addEventListener('change',loadPhoto);
+$('photoCamera').addEventListener('change',loadPhoto);
 ['zoom','x','y'].forEach(id=>$(id).addEventListener('input',()=>{updateLabels();draw()}));
 
 function blob(){
@@ -145,7 +152,7 @@ $('share').onclick=async()=>{
 $('reset').onclick=()=>{
   photoImg=null;
   if(objectUrl)URL.revokeObjectURL(objectUrl);objectUrl=null;
-  $('photo').value='';$('adjust').hidden=true;$('empty').style.display='flex';
+  $('photoGallery').value='';$('photoCamera').value='';$('adjust').hidden=true;$('empty').style.display='flex';
   setStatus('');draw();
 };
 updateLabels();

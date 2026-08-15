@@ -3,7 +3,7 @@
 Version finale **site web simple — juste un lien**.
 
 ## Fonctionnement
-La personne ouvre le lien GitHub Pages, ajoute sa photo, ajuste le cadrage, puis télécharge ou partage son visuel.
+La personne ouvre le lien GitHub Pages, choisit une photo depuis sa galerie OU prend directement une photo avec la caméra, ajuste le cadrage, puis télécharge ou partage son visuel.
 
 - Pas d'installation
 - Pas de compte
